@@ -1,0 +1,8 @@
+What is Graph? 
+- User, Post, Comment = types
+- In User type: 
+    - we can track id, name, age
+- In Post type:
+    - we can track id, title, body, published
+- In Comment type:
+    - we can track id, text
