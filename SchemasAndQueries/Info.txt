@@ -1,4 +1,4 @@
-What is Graph? 
+2. What is Graph? 
 - User, Post, Comment = types
 - In User type: 
     - we can track id, name, age
@@ -6,3 +6,37 @@ What is Graph?
     - we can track id, title, body, published
 - In Comment type:
     - we can track id, text
+
+- User can have many post
+- Post can have one author
+
+- Post can have many Comment
+- Comment can have one post
+
+- User can have many Comment
+- Comment can have one author
+
+3. GraphQL query: 
+
+query {
+    hello
+    courseInstructor
+    course
+}
+
+4. Nested GraphQL Queries
+
+query {
+  hello
+  courseInstructor
+  course
+  me {
+    id
+    name
+    email
+  }
+}
+
+
+
+
