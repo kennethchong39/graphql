@@ -10,6 +10,7 @@
 // console.log(subtract(12, 12));
 
 import { GraphQLServer } from 'graphql-yoga';
+import { v4 as uuidv4 } from 'uuid';
 
 // Scalar Types: String, Boolean, Int, Float, ID (store a single value);
 
@@ -17,9 +18,9 @@ import { GraphQLServer } from 'graphql-yoga';
 const users = [
   {
     id: '1',
-    name: 'Ken',
-    email: 'ken@example.com',
-    age: 23,
+    name: 'Andrew',
+    email: 'andrew@example.com',
+    age: 27,
   },
   {
     id: '2',
@@ -28,32 +29,59 @@ const users = [
   },
   {
     id: '3',
-    name: 'John',
-    email: 'john@example.com',
+    name: 'Mike',
+    email: 'mike@example.com',
   },
 ];
 
 const posts = [
   {
-    id: '4',
-    title: 'Hello World',
-    body: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Vel, nisi!',
+    id: '10',
+    title: 'GraphQL 101',
+    body: 'This is how to use GraphQL...',
     published: true,
     author: '1',
   },
   {
-    id: '5',
-    title: 'New Course',
-    body: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Vel, nisi!',
-    published: true,
+    id: '11',
+    title: 'GraphQL 201',
+    body: 'This is an advanced GraphQL post...',
+    published: false,
     author: '1',
   },
   {
-    id: '6',
-    title: '101 Crash Course',
-    body: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Vel, nisi!',
+    id: '12',
+    title: 'Programming Music',
+    body: '',
     published: true,
     author: '2',
+  },
+];
+
+const comments = [
+  {
+    id: '102',
+    text: 'This worked well for me. Thanks!',
+    author: '3',
+    post: '10',
+  },
+  {
+    id: '103',
+    text: 'Glad you enjoyed it.',
+    author: '1',
+    post: '10',
+  },
+  {
+    id: '104',
+    text: 'This did no work.',
+    author: '2',
+    post: '11',
+  },
+  {
+    id: '105',
+    text: 'Nevermind. I got it to work.',
+    author: '1',
+    post: '11',
   },
 ];
 
@@ -69,12 +97,19 @@ const typeDefs = `
         posts(query: String): [Post!]!
     }
 
+    type Mutation {
+      createUser(name: String!, email: String!, age: Int): User!
+      createPost(title: String!, body: String!, published: Boolean!, author: ID!): Post!
+      createComment(text: String!, author: ID!, post: ID!): Comment!
+    }
+
     type User {
         id: ID!
         name: String!
         email: String!
         age: Int
         posts: [Post!]!
+        comments: [Comment!]!
     }
 
     type Post {
@@ -83,6 +118,14 @@ const typeDefs = `
         body: String!
         published: Boolean!
         author: User!
+        comments: [Comment!]!
+    }
+
+    type Comment {
+      id: ID!
+      text: String!
+      author: User!
+      post: Post!
     }
 `;
 
@@ -150,18 +193,95 @@ const resolvers = {
       };
     },
   },
+  Mutation: {
+    createUser(parent, args, ctx, info) {
+      const emailTaken = users.some((user) => user.email === args.email);
+
+      if (emailTaken) {
+        throw new Error('Email Taken');
+      }
+
+      // const user = {
+      //   id: uuidv4(),
+      //   name: args.name,
+      //   email: args.email,
+      //   age: args.age,
+      // };
+      const user = {
+        id: uuidv4(),
+        ...args,
+      };
+
+      users.push(user);
+
+      return user;
+    },
+    createPost(parent, args, ctx, info) {
+      const userExists = users.some((user) => user.id === args.author);
+
+      if (!userExists) {
+        throw new Error('User not found');
+      }
+
+      const post = {
+        id: uuidv4(),
+        ...args,
+      };
+
+      posts.push(post);
+
+      return post;
+    },
+    createComment(parent, args, ctx, info) {
+      const userExists = users.some((user) => user.id === args.author);
+      const postExists = posts.some(
+        (post) => post.id === args.post && post.published
+      );
+
+      if (!userExists || !postExists) {
+        throw new Error('Unable to find user and post');
+      }
+
+      const comment = {
+        id: uuidv4(),
+        ...args,
+      };
+
+      comments.push(comment);
+
+      return comment;
+    },
+  },
   Post: {
+    // This relates to type Post -> author field where we get the author post
     author(parent, args, ctx, info) {
       return users.find((user) => {
         return user.id === parent.author;
       });
     },
+    comments(parent, args, ctx, info) {
+      return comments.filter((comment) => comment.post === parent.id);
+    },
   },
   User: {
+    // This relates to type User -> posts where we get all the post for the user
     posts(parent, args, ctx, info) {
       return posts.filter((post) => {
         return post.author === parent.id;
       });
+    },
+    comments(parent, args, ctx, info) {
+      return comments.filter((comment) => {
+        return comment.author === parent.id;
+      });
+    },
+  },
+  Comment: {
+    author(parent, args, ctx, info) {
+      return users.find((user) => user.id === parent.author);
+    },
+    post(parent, args, ctx, info) {
+      return posts.find((post) => post.id === parent.post);
     },
   },
   // hello() {
