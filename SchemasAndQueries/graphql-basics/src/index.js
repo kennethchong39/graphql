@@ -15,7 +15,7 @@ import { v4 as uuidv4 } from 'uuid';
 // Scalar Types: String, Boolean, Int, Float, ID (store a single value);
 
 // Demo user data
-const users = [
+let users = [
   {
     id: '1',
     name: 'Andrew',
@@ -34,7 +34,7 @@ const users = [
   },
 ];
 
-const posts = [
+let posts = [
   {
     id: '10',
     title: 'GraphQL 101',
@@ -58,7 +58,7 @@ const posts = [
   },
 ];
 
-const comments = [
+let comments = [
   {
     id: '102',
     text: 'This worked well for me. Thanks!',
@@ -81,13 +81,14 @@ const comments = [
     id: '105',
     text: 'Nevermind. I got it to work.',
     author: '1',
-    post: '11',
+    post: '12',
   },
 ];
 
 // Type definitions (schema)
 const typeDefs = `
     type Query {
+        comments: [Comment!]!
         greeting(name: String): String!
         add(numbers: [Float!]!): Float!
         grades: [Int!]!
@@ -98,9 +99,30 @@ const typeDefs = `
     }
 
     type Mutation {
-      createUser(name: String!, email: String!, age: Int): User!
-      createPost(title: String!, body: String!, published: Boolean!, author: ID!): Post!
-      createComment(text: String!, author: ID!, post: ID!): Comment!
+      createUser(data: CreateUserInput!): User!
+      createPost(data: CreatePostInput!): Post!
+      createComment(data: CreateCommentInput!): Comment!
+
+      deleteUser(id: ID!): User!
+    }
+
+    input CreateUserInput {
+      name: String!
+      email: String!
+      age: Int
+    }
+
+    input CreatePostInput {
+      title: String!,
+      body: String!,
+      published: Boolean!,
+      author: ID!
+    }
+
+    input CreateCommentInput {
+      text: String!,
+      author: ID!,
+      post: ID!
     }
 
     type User {
@@ -157,6 +179,9 @@ const resolvers = {
         return isTitleMatch || isBodyMatch;
       });
     },
+    comments(parent, args, ctx, info) {
+      return comments;
+    },
     greeting(parent, args, ctx, info) {
       if (args.name) {
         return `Hello, ${args.name}!`;
@@ -195,7 +220,7 @@ const resolvers = {
   },
   Mutation: {
     createUser(parent, args, ctx, info) {
-      const emailTaken = users.some((user) => user.email === args.email);
+      const emailTaken = users.some((user) => user.email === args.data.email);
 
       if (emailTaken) {
         throw new Error('Email Taken');
@@ -209,7 +234,7 @@ const resolvers = {
       // };
       const user = {
         id: uuidv4(),
-        ...args,
+        ...args.data,
       };
 
       users.push(user);
@@ -217,7 +242,7 @@ const resolvers = {
       return user;
     },
     createPost(parent, args, ctx, info) {
-      const userExists = users.some((user) => user.id === args.author);
+      const userExists = users.some((user) => user.id === args.data.author);
 
       if (!userExists) {
         throw new Error('User not found');
@@ -225,7 +250,7 @@ const resolvers = {
 
       const post = {
         id: uuidv4(),
-        ...args,
+        ...args.data,
       };
 
       posts.push(post);
@@ -233,9 +258,9 @@ const resolvers = {
       return post;
     },
     createComment(parent, args, ctx, info) {
-      const userExists = users.some((user) => user.id === args.author);
+      const userExists = users.some((user) => user.id === args.data.author);
       const postExists = posts.some(
-        (post) => post.id === args.post && post.published
+        (post) => post.id === args.data.post && post.published
       );
 
       if (!userExists || !postExists) {
@@ -244,12 +269,37 @@ const resolvers = {
 
       const comment = {
         id: uuidv4(),
-        ...args,
+        ...args.data,
       };
 
       comments.push(comment);
 
       return comment;
+    },
+    deleteUser(parent, args, ctx, info) {
+      const userIndex = users.findIndex((user) => user.id === args.id);
+
+      if (userIndex === -1) {
+        throw new Error('User not found');
+      }
+
+      const deletedUsers = users.splice(userIndex, 1);
+
+      posts = posts.filter((post) => {
+        const match = post.author === args.id;
+
+        if (match) {
+          comments = comments.filter((comment) => {
+            return comment.post !== post.id;
+          });
+        }
+
+        return !match;
+      });
+
+      comments = comments.filter((comment) => comment.author !== args.id);
+
+      return deletedUsers[0];
     },
   },
   Post: {
