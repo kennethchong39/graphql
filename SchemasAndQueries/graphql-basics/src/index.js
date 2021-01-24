@@ -9,7 +9,7 @@
 // console.log(addition(12, 12));
 // console.log(subtract(12, 12));
 
-import { GraphQLServer } from 'graphql-yoga';
+import { GraphQLServer, PubSub } from 'graphql-yoga';
 import { v4 as uuidv4 } from 'uuid';
 
 import db from './db';
@@ -18,6 +18,7 @@ import Mutation from './resolvers/Mutation';
 import User from './resolvers/User';
 import Post from './resolvers/Post';
 import Comment from './resolvers/Comment';
+import Subscription from './resolvers/Subscription';
 
 // Scalar Types: String, Boolean, Int, Float, ID (store a single value);
 
@@ -66,6 +67,7 @@ import Comment from './resolvers/Comment';
 //   return true;
 // },
 // };
+const pubsub = new PubSub();
 
 const server = new GraphQLServer({
   //   typeDefs: typeDefs,
@@ -74,13 +76,16 @@ const server = new GraphQLServer({
   resolvers: {
     Query,
     Mutation,
+    Subscription,
     User,
     Post,
     Comment,
   },
   //   abv is the same as commented out as it is the same name
+  //  context will be shared to all resolvers
   context: {
     db,
+    pubsub,
   },
 });
 
